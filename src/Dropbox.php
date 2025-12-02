@@ -118,7 +118,7 @@ class Dropbox
      * @param string $redirectPath
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function disconnect($redirectPath = '/')
+    public function disconnect(?string $redirectPath = null)
     {
         $id = auth()->id();
 
@@ -135,8 +135,11 @@ class Dropbox
             $token->delete();
         }
 
-        header('Location: ' .url($redirectPath));
-        exit();
+        // TODO: use redirect helper
+        if($redirectPath !== null) {
+            header('Location: ' .url($redirectPath));
+            exit();
+        }
     }
 
     /**
@@ -172,7 +175,7 @@ class Dropbox
             // Check if token is expired
             // Get current time + 5 minutes (to allow for time differences)
             $now = time() + 300;
-            if ($token->expires_in <= $now) {
+            if (strtotime($token->expires_in) <= $now) {
                 // Token is expired (or very close to it) so let's refresh
                 $params = [
                     'grant_type'    => 'refresh_token',
