@@ -118,7 +118,7 @@ class Dropbox
      * @param string $redirectPath
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function disconnect(?string $redirectPath = null)
+    public function disconnect(?string $redirectPath = null): void
     {
         $id = auth()->id();
 
