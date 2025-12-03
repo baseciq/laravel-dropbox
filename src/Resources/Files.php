@@ -71,6 +71,43 @@ class Files extends Dropbox
         ]);
     }
 
+    public function uploadAs($path, $targetFileName, $sourceFilePath, $mode = 'add')
+    {
+        if ($sourceFilePath == '') {
+            throw new Exception('File is required');
+        }
+
+	    $path     = ($path !== '') ? $this->forceStartingSlash($path) : '';
+	    $contents = $this->getContents($sourceFilePath);
+        $filename = $targetFileName ?? $this->getFilenameFromPath($targetFileName);
+        $path     = $path.$filename;
+
+        try {
+
+            $ch = curl_init('https://content.dropboxapi.com/2/files/upload');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $this->getAccessToken(),
+                'Content-Type: application/octet-stream',
+                'Dropbox-API-Arg: ' .
+                    json_encode([
+                        "path" => $path,
+                        "mode" => $mode,
+                        "autorename" => true,
+                        "mute" => false
+                    ])
+            ]);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $contents);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            return $response;
+        } catch (Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+    }
+
     public function upload($path, $uploadPath, $mode = 'add')
     {
         if ($uploadPath == '') {
