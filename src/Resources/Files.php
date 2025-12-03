@@ -79,8 +79,8 @@ class Files extends Dropbox
 
 	    $path     = ($path !== '') ? $this->forceStartingSlash($path) : '';
 	    $contents = $this->getContents($sourceFilePath);
-        $filename = $targetFileName ?? $this->getFilenameFromPath($targetFileName);
-        $path     = $path.$filename;
+        $filename = $targetFileName ?? $this->getFilenameFromPath($sourceFilePath);
+        $path     = $path . DIRECTORY_SEPARATOR . $filename;
 
         try {
 
