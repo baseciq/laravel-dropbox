@@ -1,32 +1,35 @@
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/dcblogdev/laravel-dropbox.svg?style=flat-square)](https://packagist.org/packages/dcblogdev/laravel-dropbox)
-[![Total Downloads](https://img.shields.io/packagist/dt/dcblogdev/laravel-dropbox.svg?style=flat-square)](https://packagist.org/packages/dcblogdev/laravel-dropbox)
-
-![Logo](https://repository-images.githubusercontent.com/189828582/4defa980-49c1-11eb-9668-76f985726c80)
-
-## Community
-
-There is a Discord community. https://discord.gg/VYau8hgwrm For quick help, ask questions in the appropriate channel.
-
 ## Introduction
 
 A Laravel package for working with Dropbox v2 API.
 
+This is a fork of [David Carr's](https://github.com/dcblogdev/laravel-dropbox) package.
+
+Since David’s package seems to be abandoned, contains a few minor bugs, and lacks some features I need, I decided to fork it and try continuing its development on my own.
+
+An additional motivation was that while there are many packages allowing the use of Dropbox as a filesystem in Laravel, this appears to be the only one enabling connection of our application's user account with Dropbox. For example, to send files directly to the user's Dropbox account.
+
+I count on your understanding and thank you in advance for your support in the form of bug reports and feedback.
+
 Dropbox API documentation can be found at:
 https://www.dropbox.com/developers/documentation/http/documentation
 
+**NOTE** Package name, as well as class names are subject to change.
+
 ## Application Register
-To use Dropbox API an application needs creating at https://www.dropbox.com/developers/apps
+To use Dropbox API you need to create application at https://www.dropbox.com/developers/apps
 
 Create a new application, select either Dropbox API or Dropbox Business API
-Next select the type of access needed either the app folder (useful for isolating to a single folder), or full Dropbox.
+Next select the type of access needed either the app folder (scoped access, useful for isolating to a single folder), or full Dropbox.
 
-Next copy and paste the APP Key and App Secret into your .env file:
+Next copy and paste the "App key" and "App secret" into your .env file:
 
 ```
+# Known as "App key" in Dropbox
 DROPBOX_CLIENT_ID=
+# Known as "App secret" in Dropbox
 DROPBOX_SECRET_ID=
 ```
-    
+
 Now enter your desired redirect URL. This is the URL your application will use to connect to Dropbox API.
 
 A common URL is https://domain.com/dropbox/connect
@@ -36,63 +39,18 @@ A common URL is https://domain.com/dropbox/connect
 Via Composer
 
 ```
-composer require dcblogdev/laravel-dropbox
+composer require baseciq/laravel-dropbox
 ```
  
 ## Config
 
-You can publish the config file with:
+You should publish the config file with:
 
 ```
-php artisan vendor:publish --provider="Dcblogdev\Dropbox\DropboxServiceProvider" --tag="config"
+php artisan vendor:publish --provider="Baseciq\Dropbox\DropboxServiceProvider" --tag="config"
 ```
 
 When published, the config/dropbox.php config file contains, make sure to publish this file and change the scopes to match the scopes of your Dropbox app, inside Dropbox app console.
-
-```php
-<?php
-
-return [
-
-    /*
-    * set the client id
-    */
-    'clientId' => env('DROPBOX_CLIENT_ID'),
-
-    /*
-    * set the client secret
-    */
-    'clientSecret' => env('DROPBOX_SECRET_ID'),
-
-    /*
-    * Set the url to trigger the oauth process this url should call return Dropbox::connect();
-    */
-    'redirectUri' => env('DROPBOX_OAUTH_URL'),
-
-    /*
-    * Set the url to redirecto once authenticated;
-    */
-    'landingUri' => env('DROPBOX_LANDING_URL', '/'),
-
-    /**
-     * Set access token, when set will bypass the oauth2 process
-     */
-    'accessToken' => env('DROPBOX_ACCESS_TOKEN', ''),
-
-    /**
-     * Set access type, options are offline and online
-     * Offline - will return a short-lived access_token and a long-lived refresh_token that can be used to request a new short-lived access token as long as a user's approval remains valid.
-     *
-     * Online - will return a short-lived access_token
-     */
-    'accessType' => env('DROPBOX_ACCESS_TYPE', 'offline'),
-
-    /*
-    set the scopes to be used
-    */
-    'scopes' => 'account_info.read files.metadata.write files.metadata.read files.content.write files.content.read',
-];
-```
 
 ## Migration
 You can publish the migration with:
@@ -133,9 +91,10 @@ A routes example:
 
 ```php
 Route::group(['middleware' => ['web', 'auth']], function(){
-    Route::get('dropbox', function(){
+    Route::get('dropbox-status', function(){
 
         if (! Dropbox::isConnected()) {
+            // not connected, redirect to connect handler:
             return redirect(env('DROPBOX_OAUTH_URL'));
         } else {
             //display your details
@@ -172,6 +131,8 @@ Route::get('dropbox/disconnect', function(){
     return Dropbox::disconnect('app/dropbox');
 });
 ```
+
+Address used in DROPBOX_OAUTH_URL serves both as a connection initiation endpoint and redirect_uri (address where external service with redirect you back).
 
 Once authenticated you can call Dropbox:: with the following verbs:
 
@@ -264,6 +225,12 @@ Upload files to Dropbox by passing the folder path followed by the filename. Not
 
 ```php
 Dropbox::files()->upload($path, $file)
+```
+
+Upload File as specified filename
+
+```php
+Dropbox::files()->uploadAs($path, $targetFilename, $sourceFilePath)
 ```
 
 Download File

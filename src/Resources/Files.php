@@ -4,7 +4,9 @@ namespace Dcblogdev\Dropbox\Resources;
 
 use Dcblogdev\Dropbox\Dropbox;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 use Exception;
+use FileNotFoundException;
 
 use function PHPUnit\Framework\throwException;
 use function trigger_error;
@@ -75,6 +77,8 @@ class Files extends Dropbox
     {
         if ($sourceFilePath == '') {
             throw new Exception('File is required');
+        } elseif (!file_exists($sourceFilePath)) {
+            throw new FileNotFoundException('File does not exist: ' . $sourceFilePath);
         }
 
 	    $path     = ($path !== '') ? $this->forceStartingSlash($path) : '';
@@ -84,23 +88,21 @@ class Files extends Dropbox
 
         try {
 
-            $ch = curl_init('https://content.dropboxapi.com/2/files/upload');
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Authorization: Bearer ' . $this->getAccessToken(),
-                'Content-Type: application/octet-stream',
-                'Dropbox-API-Arg: ' .
-                    json_encode([
+            $client = new Client;
+
+            $response = $client->post('https://content.dropboxapi.com/2/files/upload', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $this->getAccessToken(),
+                    'Content-Type' => 'application/octet-stream',
+                    'Dropbox-API-Arg' => json_encode([
                         "path" => $path,
                         "mode" => $mode,
                         "autorename" => true,
                         "mute" => false
                     ])
+                ],
+                'body' => $contents
             ]);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $contents);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
-            curl_close($ch);
 
             return $response;
         } catch (Exception $e) {
@@ -110,39 +112,7 @@ class Files extends Dropbox
 
     public function upload($path, $uploadPath, $mode = 'add')
     {
-        if ($uploadPath == '') {
-            throw new Exception('File is required');
-        }
-
-	    $path     = ($path !== '') ? $this->forceStartingSlash($path) : '';
-	    $contents = $this->getContents($uploadPath);
-        $filename = $this->getFilenameFromPath($uploadPath);
-        $path     = $path.$filename;
-
-        try {
-
-            $ch = curl_init('https://content.dropboxapi.com/2/files/upload');
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Authorization: Bearer ' . $this->getAccessToken(),
-                'Content-Type: application/octet-stream',
-                'Dropbox-API-Arg: ' .
-                    json_encode([
-                        "path" => $path,
-                        "mode" => $mode,
-                        "autorename" => true,
-                        "mute" => false
-                    ])
-            ]);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $contents);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
-            curl_close($ch);
-
-            return $response;
-        } catch (Exception $e) {
-            throw new Exception($e->getMessage());
-        }
+        $this->uploadAs($path, null, $uploadPath, $mode);
     }
 
     public function download($path, $destFolder = '')
@@ -210,9 +180,7 @@ class Files extends Dropbox
 
     protected function getFilenameFromPath($filePath)
     {
-        $parts = explode('/', $filePath);
-        $filename = end($parts);
-        return $this->forceStartingSlash($filename);
+        return $this->forceStartingSlash(pathinfo($filePath, PATHINFO_BASENAME));
     }
 
     protected function getContents($filePath)
